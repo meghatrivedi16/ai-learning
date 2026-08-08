@@ -1,0 +1,20 @@
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
+
+
+cd C:\Megha\ai-learning
+uv init .
+
+
+uv add python-dotenv requests pandas numpy pydantic fastapi uvicorn
+uv add openai langchain langchain-openai langchain-community
+uv add chromadb sentence-transformers tiktoken
+uv add langsmith redis
+
+
+
+#uv add openai google-generativeai langchain langchain-openai langchain-community
+
+
+
+uv pip list
+type pyproject.toml

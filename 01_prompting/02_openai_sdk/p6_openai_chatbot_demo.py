@@ -1,6 +1,7 @@
 """
 DEMO 1: Comedy Chatbot with OpenAI SDK + Streamlit
 API key is loaded server-side only — never rendered in the UI or sent to the browser.
+Built by Megha — a developer learning to build with AI.
 """
 
 import streamlit as st
@@ -20,13 +21,34 @@ st.caption("Ask me anything — clean comedy guaranteed.")
 
 # --- Playful sidebar, no key input at all ---
 with st.sidebar:
-    st.header("About")
+    st.header("About this bot")
     st.write("This bot runs on a securely configured API key. No peeking! 🕵️")
     if st.button("🔍 Try to find the API key"):
         st.warning("Nice try. The key's not in this app, it's not in your browser, "
                    "it's not even in this galaxy. It lives quietly in a `.env` file, "
                    "sipping tea, minding its own business. 🍵🔐")
 
+    st.divider()
+
+    st.header("About the developer")
+    st.markdown(
+        """
+        **Hi, I'm Megha 👋**
+
+        I'm a developer learning to build with AI — figuring out
+        LLMs, prompt engineering, and agentic systems one project
+        at a time. This comedy chatbot is part of a hands-on
+        practice series where I explore the same concept across
+        different frameworks (OpenAI SDK, LangChain, AutoGen) to
+        understand what each one actually does under the hood,
+        rather than just following tutorials.
+
+        Currently exploring: prompting → chunking → RAG → agents.
+        """
+    )
+    st.caption("Built with Streamlit + OpenAI SDK")
+
+# --- API key check ---
 if not api_key:
     st.error("No API key configured on the server. Contact the app owner.")
     st.stop()
@@ -82,3 +104,5 @@ if prompt := st.chat_input():
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
+
+# command to run: streamlit run p6_comedy_chatbot_demo.py

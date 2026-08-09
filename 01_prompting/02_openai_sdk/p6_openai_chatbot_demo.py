@@ -1,12 +1,6 @@
 """
-DEMO 1: Building a Multi-SDK LLM Interface (OpenAI Focus)
-Module 1: LLM Foundations & Prompt Engineering
----------------------------------------------------------
-Goal: Create a simple, functional ChatBot using the OpenAI SDK and Streamlit.
-Learners will see how to:
-1. Initialize the OpenAI Client.
-2. Manage session-based chat history.
-3. Handle streaming responses for a better UI experience.
+DEMO 1: Comedy Chatbot with OpenAI SDK + Streamlit
+API key is loaded server-side only — never rendered in the UI or sent to the browser.
 """
 
 import streamlit as st
@@ -14,83 +8,77 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from a local .env file (if present)
 load_dotenv()
-# Read OPENAI_API_KEY from environment as default for the sidebar
-env_openai_api_key = os.getenv("OPENAI_API_KEY", "")
+
+# --- API KEY: loaded silently from .env / Streamlit secrets, never shown in UI ---
+api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
 
 # --- PAGE CONFIGURATION ---
-st.set_page_config(page_title="Agentic AI: OpenAI Demo", layout="centered")
-st.title("🤖 Simple OpenAI Chatbot")
-st.caption("A Module 1 Demo for 'Agentic AI Architecture Foundations'")
+st.set_page_config(page_title="Comedy Bot Demo", layout="centered")
+st.title("😄 Comedy Chatbot")
+st.caption("Ask me anything — clean comedy guaranteed.")
 
-# --- SIDEBAR: API KEY MANAGEMENT ---
-# In a real app, you might use a .env file or environment variables.
-# For this demo, we provide a sidebar input for the API Key.
+# --- Playful sidebar, no key input at all ---
 with st.sidebar:
-    st.header("Configuration")
-    openai_api_key = st.text_input("Enter OpenAI API Key", value=env_openai_api_key, type="password")
-    "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
+    st.header("About")
+    st.write("This bot runs on a securely configured API key. No peeking! 🕵️")
+    if st.button("🔍 Try to find the API key"):
+        st.warning("Nice try. The key's not in this app, it's not in your browser, "
+                   "it's not even in this galaxy. It lives quietly in a `.env` file, "
+                   "sipping tea, minding its own business. 🍵🔐")
 
-# --- INITIALIZE CHAT HISTORY ---
-# Streamlit's session_state allows us to keep the conversation across reruns.
+if not api_key:
+    st.error("No API key configured on the server. Contact the app owner.")
+    st.stop()
+
+SYSTEM_PROMPT = """
+You are a witty, family-friendly comedian chatbot.
+Rules:
+- Answer every message with humor — puns, wordplay, playful exaggeration, light sarcasm.
+- Keep it clean: no vulgarity, no profanity, no offensive stereotypes.
+- Still be genuinely helpful for real questions, just deliver it with comedic flair.
+- Keep responses concise unless asked for a longer bit.
+"""
+
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
-        {"role": "assistant", "content": "Hello! I am your OpenAI-powered assistant. How can I help you today?"}
+        {"role": "assistant", "content": "Hey there! Ask me anything — I'll answer it with a smile."}
     ]
 
-# Display existing chat messages from history on app rerun
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
-# --- CHAT LOGIC ---
-# Handle user input
 if prompt := st.chat_input():
-    if not openai_api_key:
-        st.info("Please add your OpenAI API key to continue.")
-        st.stop()
-
-    # 1. Add user message to chat history and display it
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
 
-    # 2. Initialize the OpenAI client with the provided key
-    client = OpenAI(api_key=openai_api_key)
+    client = OpenAI(api_key=api_key)
 
-    # 3. Generate response from OpenAI
     with st.chat_message("assistant"):
-        # We use a placeholder to update the text as it streams in
         response_placeholder = st.empty()
         full_response = ""
-        
-        # Calling the Chat Completion API
-        # Model 'gpt-4o' is used for high-quality reasoning (Module 1 Concepts)
+
         try:
+            api_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + [
+                {"role": m["role"], "content": m["content"]} for m in st.session_state.messages
+            ]
+
             stream = client.chat.completions.create(
                 model="gpt-4o",
-                messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
+                messages=api_messages,
                 stream=True,
-                temperature=0.7,      # Adjust randomness
-                max_tokens=500,       # Limit length
-                presence_penalty=0.6  # Encourage variety
+                temperature=0.9,
+                max_tokens=400,
+                presence_penalty=0.6
             )
-            
-            # Iterate through the stream of chunks
+
             for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     full_response += chunk.choices[0].delta.content
                     response_placeholder.markdown(full_response + "▌")
-            
-            # Finalize the response display
+
             response_placeholder.markdown(full_response)
-            
-            # 4. Save the assistant's response to history
             st.session_state.messages.append({"role": "assistant", "content": full_response})
-            print(st.session_state.messages)  # For debugging/logging purposes
-            
+
         except Exception as e:
             st.error(f"An error occurred: {e}")
-
-
-#command to run: streamlit run p6_openai_chatbot_demo.py
-

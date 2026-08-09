@@ -11,15 +11,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- API KEY: loaded silently from .env / Streamlit secrets, never shown in UI ---
 api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
+
+# --- USAGE LIMIT CONFIG ---
+MAX_MESSAGES = 3  # total user messages allowed per session (tune this to taste)
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Comedy Bot Demo", layout="centered")
 st.title("😄 Comedy Chatbot")
-st.caption("Ask me anything — clean comedy guaranteed.")
+st.caption("Ask me anything — clean comedy guaranteed (while my wallet lasts).")
 
-# --- Playful sidebar, no key input at all ---
 with st.sidebar:
     st.header("About this bot")
     st.write("This bot runs on a securely configured API key. No peeking! 🕵️")
@@ -38,17 +39,17 @@ with st.sidebar:
         I'm a developer learning to build with AI — figuring out
         LLMs, prompt engineering, and agentic systems one project
         at a time. This comedy chatbot is part of a hands-on
-        practice series where I explore the same concept across
-        different frameworks (OpenAI SDK, LangChain, AutoGen) to
-        understand what each one actually does under the hood,
-        rather than just following tutorials.
+        practice series exploring the same concept across
+        different frameworks (OpenAI SDK, LangChain, AutoGen).
 
         Currently exploring: prompting → chunking → RAG → agents.
         """
     )
     st.caption("Built with Streamlit + OpenAI SDK")
 
-# --- API key check ---
+    st.divider()
+    st.caption(f"💬 Messages used this session: {st.session_state.get('msg_count', 0)}/{MAX_MESSAGES}")
+
 if not api_key:
     st.error("No API key configured on the server. Contact the app owner.")
     st.stop()
@@ -67,11 +68,27 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Hey there! Ask me anything — I'll answer it with a smile."}
     ]
 
+if "msg_count" not in st.session_state:
+    st.session_state["msg_count"] = 0
+
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
+# --- LIMIT REACHED: show a funny paywall-ish message instead of the chat input ---
+if st.session_state.msg_count >= MAX_MESSAGES:
+    st.chat_message("assistant").write(
+        "Whoa there, comedy fan! 🎤 I've cracked my quota of jokes for this session — "
+        "turns out being funny costs real money (who knew?). I'm a broke developer's "
+        "side project, not a Silicon Valley unicorn. 🦄💸\n\n"
+        "If you enjoyed this, share it with a friend, star the repo, or just imagine "
+        "10 more jokes — they were probably pretty good. 😄"
+    )
+    st.info("Session limit reached. Refresh the page to start a new session (resets the counter).")
+    st.stop()
+
 if prompt := st.chat_input():
     st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.msg_count += 1
     st.chat_message("user").write(prompt)
 
     client = OpenAI(api_key=api_key)
@@ -86,11 +103,11 @@ if prompt := st.chat_input():
             ]
 
             stream = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",   # cheaper model — see note below
                 messages=api_messages,
                 stream=True,
                 temperature=0.9,
-                max_tokens=400,
+                max_tokens=250,        # capped lower to control cost per response
                 presence_penalty=0.6
             )
 
@@ -101,6 +118,11 @@ if prompt := st.chat_input():
 
             response_placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+            # Warn on the second-to-last message, building the joke before the cutoff
+            remaining = MAX_MESSAGES - st.session_state.msg_count
+            if remaining == 1:
+                st.info("😅 Psst — one message left before I go full 'starving artist' on you.")
 
         except Exception as e:
             st.error(f"An error occurred: {e}")

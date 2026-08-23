@@ -2533,6 +2533,7 @@ source = { editable = "SupportTicketProject" }
 dependencies = [
     { name = "anthropic" },
     { name = "fastapi" },
+    { name = "langchain-openai" },
     { name = "openai" },
     { name = "psycopg", extra = ["binary"] },
     { name = "python-dotenv" },
@@ -2543,6 +2544,7 @@ dependencies = [
 requires-dist = [
     { name = "anthropic", specifier = ">=0.121.0" },
     { name = "fastapi", specifier = ">=0.141.1" },
+    { name = "langchain-openai", specifier = ">=1.4.2" },
     { name = "openai", specifier = ">=2.53.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
     { name = "python-dotenv", specifier = ">=1.2.2" },

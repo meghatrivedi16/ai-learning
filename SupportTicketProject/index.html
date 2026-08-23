@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Support Ticket Assistant</title>
+<style>
+  :root {
+    --bg: #10222b;
+    --panel: #16303c;
+    --border: #244353;
+    --text: #eef3f2;
+    --text-muted: #9fb4bb;
+    --accent: #e0a458;
+    --sql: #2fa89a;
+    --rag: #d9754f;
+    --both: #b98fd1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+  header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .msg {
+    max-width: 640px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    line-height: 1.5;
+    font-size: 14.5px;
+    white-space: pre-wrap;
+  }
+  .user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: #201404;
+  }
+  .bot {
+    align-self: flex-start;
+    background: var(--panel);
+    border: 1px solid var(--border);
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-family: ui-monospace, monospace;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+  .badge.sql { background: rgba(47,168,154,0.18); color: var(--sql); }
+  .badge.rag { background: rgba(217,117,79,0.18); color: var(--rag); }
+  .badge.both { background: rgba(185,143,209,0.18); color: var(--both); }
+  #samples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 24px 16px;
+  }
+  .sample-chip {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .sample-chip:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  #inputRow {
+    display: flex;
+    gap: 10px;
+    padding: 0 24px 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  #questionInput {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 14.5px;
+  }
+  #questionInput:focus { outline: 2px solid var(--accent); }
+  #sendBtn {
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #201404;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #sendBtn:disabled { opacity: 0.5; cursor: default; }
+  .loading { color: var(--text-muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Support ticket assistant</h1>
+  <p>Ask about tickets. Each answer shows whether it used SQL, semantic search, or both.</p>
+</header>
+
+<div id="chat"></div>
+
+<div id="samples">
+  <button class="sample-chip">How many tickets are currently open?</button>
+  <button class="sample-chip">Find tickets similar to: package tracking hasn't updated in a week</button>
+  <button class="sample-chip">Show me unresolved tickets similar to shipping delays</button>
+  <button class="sample-chip">How many refund tickets are still open?</button>
+</div>
+
+<div id="inputRow">
+  <input id="questionInput" type="text" placeholder="e.g. How many tickets are unresolved this week?" autocomplete="off">
+  <button id="sendBtn">Send</button>
+</div>
+
+<script>
+  const API_URL = "http://127.0.0.1:8000/ask";
+
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("questionInput");
+  const sendBtn = document.getElementById("sendBtn");
+
+  function addMessage(role, text, classification) {
+    const div = document.createElement("div");
+    div.className = "msg " + role;
+
+    if (role === "bot" && classification) {
+      const badge = document.createElement("div");
+      badge.className = "badge " + classification;
+      badge.textContent = classification;
+      div.appendChild(badge);
+      div.appendChild(document.createElement("br"));
+    }
+
+    div.appendChild(document.createTextNode(text));
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return div;
+  }
+
+  async function sendQuestion() {
+    const question = input.value.trim();
+    if (!question) return;
+
+    addMessage("user", question);
+    input.value = "";
+    sendBtn.disabled = true;
+
+    const loadingEl = addMessage("bot", "Thinking...");
+    loadingEl.classList.add("loading");
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question })
+      });
+
+      if (!response.ok) {
+        throw new Error("Server returned status " + response.status);
+      }
+
+      const data = await response.json();
+      loadingEl.remove();
+      addMessage("bot", data.answer, data.classification);
+    } catch (err) {
+      loadingEl.remove();
+      addMessage("bot", "Something went wrong: " + err.message);
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener("click", sendQuestion);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendQuestion();
+  });
+
+  document.querySelectorAll(".sample-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      input.value = chip.textContent;
+      sendQuestion();
+    });
+  });
+</script>
+
+</body>
+</html>

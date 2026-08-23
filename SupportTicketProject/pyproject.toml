@@ -1,0 +1,24 @@
+[project]
+name = "supportticketproject"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "meghatrivedi16", email = "meghatrivedi16@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "anthropic>=0.121.0",
+    "fastapi>=0.141.1",
+    "openai>=2.53.0",
+    "psycopg[binary]>=3.3.4",
+    "python-dotenv>=1.2.2",
+    "uvicorn>=0.52.1",
+]
+
+[project.scripts]
+supportticketproject = "supportticketproject:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
